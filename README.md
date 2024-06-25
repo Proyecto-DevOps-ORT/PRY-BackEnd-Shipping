@@ -47,7 +47,40 @@ docker inspect shipping-service-example-container
 - Repository Name: back-end
 - Dejar los demas valores por defecto.
 
-## 06: Create Docker Image locally
+## 06: Create Docker Imaage, tag y push a ECR
+
+EN AWS voy a: 
+
+Amazon ECR => Registropivado=>Repositorios=>pry-backend-shipping
+
+
+Click en => Ver comandos de envio
+
+Siga los siguientes pasos a fin de autenticar y enviar una imagen a su repositorio. Para obtener métodos de autenticación de registro adicionales, incluido el ayudante de credenciales de Amazon ECR, consulte Autenticación del registro .
+Retrieve an authentication token and authenticate your Docker client to your registry. Use the AWS CLI:
+
+```
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 317097728802.dkr.ecr.us-east-1.amazonaws.com
+```
+>>Nota: Si recibe un error al utilizar AWS CLI, asegúrese de tener instaladas las últimas versiones de AWS CLI y Docker.
+
+Cree una imagen de Docker con el siguiente comando:
+
+```
+docker build -t pry-backend-shipping .
+```
+
+Cuando se complete la creación, etiquete la imagen para poder enviarla a este repositorio:
+
+```
+docker tag pry-backend-shipping:latest 317097728802.dkr.ecr.us-east-1.amazonaws.com/pry-backend-shipping:latest
+```
+Ejecute el siguiente comando para enviar esta imagen al repositorio de AWS recién creado:
+
+```
+docker push 317097728802.dkr.ecr.us-east-1.amazonaws.com/pry-backend-shipping:latest
+```
+## 06: Create Docker Image locally TEMPLATE
 
 - Crear la imagen de Docker localmente.
 
@@ -113,8 +146,33 @@ docker push 317097728802.dkr.ecr.us-east-1.amazonaws.com/back-end-shipping-servi
 
 >Nota: En caso de tener problema con el docker login, utilizar el siguiente comando: `docker login -u AWS -p $(aws ecr get-login-password --region <REGION>) <AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com` (NO TUVE QUE USAR ESTO)
 
+## REMOTO AWS IPS
+- **Payments Service**: `172.17.0.2:8080`
+- **Shipping Service**: `44.195.69.200:8080`
+- **Products Service**: `3.89.24.89:8080`
+
+- **Orders service**: `44.195.69.200`
 
 
+---
+---
+---
+---
+***
+
+Agrego Github Actions a Shippping
+
+1. Crear carpeta ".github" en directorio raiz del proyecto
+2. Dentro de .github crear carpeta "workflows"
+3. Crear arvhivo ".yml" en el que se agregara el workfolow para CI/CD. Nombre del archivo "cd-cd.yml"
+4. 
+
+
+---
+---
+---
+---
+***
 
 
 # Informacion util
