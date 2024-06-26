@@ -17,12 +17,19 @@ jobs:
       uses: docker/setup-buildx-action@v1
      
     #Las credenciales se leen del  arhcivo ~/.aws/credentials - Actualizarlas!!!!!!
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
+    #- name: Login to Amazon ECR
+      #id: login-ecr
+      #uses: aws-actions/amazon-ecr-login@v1
       #quito esto porque no se necesita
       #with:
         #region: us-east-1
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{secrets.AWS_ACCESS_KEY_ID}}
+        aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: ${{secrets.AWS_DEFAULT_REGION}}
 
     - name: Build, tag and push Docker image to ECR
       id: build-image
@@ -36,6 +43,44 @@ jobs:
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+     ##########################################
+     ##########  DEPLOYMENT TO ECS ############
+
+    #  - name: Update ECS service with new image
+    #  env:
+    #    AWS_REGION: $#{{ secrets.AWS_DEFAULT_REGION }}
+    #    CLUSTER_NAME: my-cluster
+    #    SERVICE_NAME: my-service
+    #    ECR_REGISTRY: 317097728802.dkr.ecr.us-east-1.amazonaws.com
+    #    ECR_REPOSITORY: pry-backend-shipping
+    #    IMAGE_TAG: latest
+    #  run: |
+    #    # Get the current task definition
+    #    TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition $SERVICE_NAME --query 'taskDefinition')
+       
+    #    # Extract the family and container definitions
+    #    FAMILY=$(echo $TASK_DEFINITION | jq -r .family)
+    #    CONTAINER_DEFINITIONS=$(echo $TASK_DEFINITION | jq '.containerDefinitions')
+
+    #    # Update the container image
+    #    NEW_CONTAINER_DEFINITIONS=$(echo $CONTAINER_DEFINITIONS | jq '[.[] | if .name == "container-name" then .image = "'$ECR_REGISTRY'/'$ECR_REPOSITORY':'$IMAGE_TAG'" else . end]')
+
+    #    # Register the new task definition
+    #    NEW_TASK_DEFINITION=$(aws ecs register-task-definition \
+    #      --family $FAMILY \
+    #      --container-definitions "$NEW_CONTAINER_DEFINITIONS" \
+    #      --requires-compatibilities "FARGATE" \
+    #      --cpu "256" \
+    #      --memory "512")
+
+    #    # Get the revision number of the new task definition
+    #    NEW_TASK_DEFINITION_REVISION=$(echo $NEW_TASK_DEFINITION | jq -r '.taskDefinition.taskDefinitionArn')
+
+    #    # Update the ECS service to use the new task definition
+    #    aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition $NEW_TASK_DEFINITION_REVISION 
+     
+     
 
     
         
