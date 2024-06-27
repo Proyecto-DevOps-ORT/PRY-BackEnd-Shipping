@@ -46,38 +46,38 @@ jobs:
      ##########################################
      ##########  DEPLOYMENT TO ECS ############
 
-    #  - name: Update ECS service with new image
-    #  env:
-    #    AWS_REGION: $#{{ secrets.AWS_DEFAULT_REGION }}
-    #    CLUSTER_NAME: my-cluster
-    #    SERVICE_NAME: my-service
-    #    ECR_REGISTRY: 317097728802.dkr.ecr.us-east-1.amazonaws.com
-    #    ECR_REPOSITORY: pry-backend-shipping
-    #    IMAGE_TAG: latest
-    #  run: |
-    #    # Get the current task definition
-    #    TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition $SERVICE_NAME --query 'taskDefinition')
+    - name: Update ECS service with new image
+      env:
+       AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+       CLUSTER_NAME: fargate-be
+       SERVICE_NAME: service-pry-backend-shipping
+       ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+       ECR_REPOSITORY: pry-backend-shipping
+       IMAGE_TAG: latest
+      run: |
+       # Get the current task definition
+       TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition $SERVICE_NAME --query 'taskDefinition')
        
-    #    # Extract the family and container definitions
-    #    FAMILY=$(echo $TASK_DEFINITION | jq -r .family)
-    #    CONTAINER_DEFINITIONS=$(echo $TASK_DEFINITION | jq '.containerDefinitions')
+       # Extract the family and container definitions
+       FAMILY=$(echo $TASK_DEFINITION | jq -r .family)
+       CONTAINER_DEFINITIONS=$(echo $TASK_DEFINITION | jq '.containerDefinitions')
 
-    #    # Update the container image
-    #    NEW_CONTAINER_DEFINITIONS=$(echo $CONTAINER_DEFINITIONS | jq '[.[] | if .name == "container-name" then .image = "'$ECR_REGISTRY'/'$ECR_REPOSITORY':'$IMAGE_TAG'" else . end]')
+       # Update the container image
+       NEW_CONTAINER_DEFINITIONS=$(echo $CONTAINER_DEFINITIONS | jq '[.[] | if .name == "container-name" then .image = "'$ECR_REGISTRY'/'$ECR_REPOSITORY':'$IMAGE_TAG'" else . end]')
 
-    #    # Register the new task definition
-    #    NEW_TASK_DEFINITION=$(aws ecs register-task-definition \
-    #      --family $FAMILY \
-    #      --container-definitions "$NEW_CONTAINER_DEFINITIONS" \
-    #      --requires-compatibilities "FARGATE" \
-    #      --cpu "256" \
-    #      --memory "512")
+       # Register the new task definition
+       NEW_TASK_DEFINITION=$(aws ecs register-task-definition \
+         --family $FAMILY \
+         --container-definitions "$NEW_CONTAINER_DEFINITIONS" \
+         --requires-compatibilities "FARGATE" \
+         --cpu "256" \
+         --memory "512")
 
-    #    # Get the revision number of the new task definition
-    #    NEW_TASK_DEFINITION_REVISION=$(echo $NEW_TASK_DEFINITION | jq -r '.taskDefinition.taskDefinitionArn')
+       # Get the revision number of the new task definition
+       NEW_TASK_DEFINITION_REVISION=$(echo $NEW_TASK_DEFINITION | jq -r '.taskDefinition.taskDefinitionArn')
 
-    #    # Update the ECS service to use the new task definition
-    #    aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition $NEW_TASK_DEFINITION_REVISION 
+       # Update the ECS service to use the new task definition
+       aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition $NEW_TASK_DEFINITION_REVISION 
      
      
 
