@@ -31,6 +31,11 @@ jobs:
         aws-session-token: ${{secrets.AWS_SESSION_TOKEN}}
         aws-region: ${{secrets.AWS_DEFAULT_REGION}}
 
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+
     - name: Build, tag and push Docker image to ECR
       id: build-image
       env:
@@ -42,7 +47,7 @@ jobs:
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+       ## echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
      ##########################################
      ##########  DEPLOYMENT TO ECS ############
