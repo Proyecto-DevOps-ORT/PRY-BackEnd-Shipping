@@ -66,14 +66,12 @@ jobs:
        # Update the container image
        NEW_CONTAINER_DEFINITIONS=$(echo $CONTAINER_DEFINITIONS | jq '[.[] | if .name == "container-name" then .image = "'$ECR_REGISTRY'/'$ECR_REPOSITORY':'$IMAGE_TAG'" else . end]')
 
-       # Update network mode to 'awsvpc'
-       NEW_CONTAINER_DEFINITIONS=$(echo $NEW_CONTAINER_DEFINITIONS | jq '.[] | .networkMode = "awsvpc"')
-
        # Register the new task definition
        NEW_TASK_DEFINITION=$(aws ecs register-task-definition \
          --family $FAMILY \
          --container-definitions "$NEW_CONTAINER_DEFINITIONS" \
          --requires-compatibilities "FARGATE" \
+         --network-mode "awsvpc" \
          --cpu "256" \
          --memory "512")
 
