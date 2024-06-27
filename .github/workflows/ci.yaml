@@ -51,12 +51,13 @@ jobs:
        AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
        CLUSTER_NAME: fargate-be
        SERVICE_NAME: service-pry-backend-shipping
+       TASK_DEFINITION_NAME: task-def-pry-backend-shipping
        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
        ECR_REPOSITORY: pry-backend-shipping
        IMAGE_TAG: latest
       run: |
        # Get the current task definition
-       TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition $SERVICE_NAME --query 'taskDefinition')
+       TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition $TASK_DEFINITION_NAME --query 'taskDefinition')
        
        # Extract the family and container definitions
        FAMILY=$(echo $TASK_DEFINITION | jq -r .family)
