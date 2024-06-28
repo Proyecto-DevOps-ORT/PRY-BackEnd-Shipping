@@ -7,8 +7,10 @@ on:
       - feature/PDO-2
 
 jobs:
-  build-and-push:
+  build-and-push-ecr:
     runs-on: ubuntu-latest
+    outputs:
+      ecr_registry: ${{ steps.output-values.outputs.ecr_registry }} # Asegurarse de que este output se define correctamente
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -29,6 +31,10 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
+    - name: Set output for ECR registry
+      id: output-values
+      run: echo "::set-output name=ecr_registry::${{ steps.login-ecr.outputs.registry }}"
+
 
     - name: Build, tag and push Docker image to ECR
       id: build-image
@@ -47,6 +53,10 @@ jobs:
      ##########  DEPLOYMENT TO ECS ############
 
      ## el arn rol lo saco de IAM roles => arn:aws:iam::317097728802:role/LabRole
+  deploy-to-ecs:
+    needs: build-and-push-ecr
+    runs-on: ubuntu-latest
+    steps:
 
     - name: Update ECS service with new image
       env:
@@ -54,7 +64,7 @@ jobs:
        CLUSTER_NAME: fargate-be
        SERVICE_NAME: service-pry-backend-shipping
        TASK_DEFINITION_NAME: task-def-pry-backend-shipping
-       ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+       ECR_REGISTRY: ${{ needs.build-and-push-ecr.outputs.ecr_registry }}
        ECR_REPOSITORY: pry-backend-shipping
        IMAGE_TAG: latest
       run: |
