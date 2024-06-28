@@ -46,6 +46,8 @@ jobs:
      ##########################################
      ##########  DEPLOYMENT TO ECS ############
 
+     ## el arn rol lo saco de IAM roles => arn:aws:iam::317097728802:role/LabRole
+
     - name: Update ECS service with new image
       env:
        AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
@@ -73,7 +75,8 @@ jobs:
          --requires-compatibilities "FARGATE" \
          --network-mode "awsvpc" \
          --cpu "256" \
-         --memory "512")
+         --memory "512"\
+         --execution-role-arn "arn:aws:iam::317097728802:role/LabRole")
 
        # Get the revision number of the new task definition
        NEW_TASK_DEFINITION_REVISION=$(echo $NEW_TASK_DEFINITION | jq -r '.taskDefinition.taskDefinitionArn')
