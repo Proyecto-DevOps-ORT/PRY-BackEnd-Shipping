@@ -37,6 +37,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   build-and-push-ecr:
+    needs: sonarcloud
     runs-on: ubuntu-latest
     outputs:
       ecr_registry: ${{ steps.output-values.outputs.ecr_registry }} # Asegurarse de que este output se define correctamente
