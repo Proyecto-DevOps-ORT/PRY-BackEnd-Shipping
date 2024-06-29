@@ -145,7 +145,7 @@ jobs:
   #   - name: Install NodeJS
   #     uses: actions/setup-node@v3
   #     with:
-  #       node-version: 16
+  #       node-version: 20
   #   #(aqui podriamos agregar slack para notificar si falla el test [npm install -g newman-reporter-slackreporter])
   #   - name: Install globally Newman & Reporter
   #     run: |
