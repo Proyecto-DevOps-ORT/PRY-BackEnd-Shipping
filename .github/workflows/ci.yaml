@@ -1,7 +1,7 @@
 name: CI/CD
 
 env:
-  POSTMAN_REPOSITORY_NAME: your-repository-name # Defino nombre de repositorio postman
+  POSTMAN_REPOSITORY_NAME: shipping-service-example # Defino nombre de repositorio postman
 
 
 on:
