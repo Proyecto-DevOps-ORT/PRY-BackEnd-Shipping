@@ -2,6 +2,8 @@ name: CI/CD
 
 env:
   POSTMAN_REPOSITORY_NAME: shipping-service-example # Defino nombre de repositorio postman
+  ECR_REPOSITORY: pry-backend-shipping
+  IMAGE_TAG: latest
 
 
 on:
@@ -41,7 +43,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Proyecto-DevOps-ORT_PRY-BackEnd-Shipping
 
-  build-and-push-ecr:
+  build-docker-image:
     needs: sonarcloud
     runs-on: ubuntu-latest
     outputs:
@@ -76,20 +78,86 @@ jobs:
       env:
         #317097728802.dkr.ecr.us-east-1.amazonaws.com
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: pry-backend-shipping
-        IMAGE_TAG: latest
+        ECR_REPOSITORY: ${{env.ECR_REPOSITORY}}
+        IMAGE_TAG: ${{env.IMAGE_TAG}}
         #IMAGE_TAG: ${{ env.VERSION }}
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
        ## echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
+
+  postman-tests:
+    needs: build-docker-image
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+  #   - name: Install NodeJS
+  #     uses: actions/setup-node@v3
+  #     with:
+  #       node-version: 20
+  #   #(aqui podriamos agregar slack para notificar si falla el test [npm install -g newman-reporter-slackreporter])
+  #   - name: Install globally Newman & Reporter
+  #     run: |
+  #       npm install -g newman
+  #       npm install -g newman-reporter-htmlextra
+      
+  #     # Se crea un directorio (postman) en la raiz del proyecto para guardar el reporte generado por newman
+  #     # Se ejecuta el comando newman run para correr la coleccion de postman y se genera un reporte en formato html
+  #     # POSTMAN_REPOSITORY_NAME fue definida al comienzo del archivo en la seccion de env  
+  #   - name: Run Postman collection & generate report
+  #     run: |
+  #       mkdir -p postman
+  #       newman run .github/tests/$#{{ env.POSTMAN_REPOSITORY_NAME }}.postman_collectionConTEST.json -r htmlextra --reporter-htmlextra-export testResults/testReport.html
+
+  #   - name: Upload Test Report
+  #     uses: actions/upload-artifact@v2
+  #     with:
+  #       name: postman-test-report
+  #       path: postman/testReport.html
+
+
+  push-ecr:
+    needs: [postman-tests]
+    runs-on: ubuntu-latest
+    outputs:
+      ecr_registry: ${{ steps.output-values.outputs.ecr_registry }} # Asegurarse de que este output se define correctamente
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+     
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{secrets.AWS_ACCESS_KEY_ID}}
+        aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+        aws-session-token: ${{secrets.AWS_SESSION_TOKEN}}
+        aws-region: ${{secrets.AWS_DEFAULT_REGION}}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+
+    - name: push Docker image to ECR
+      id: push-image
+      env:
+        #317097728802.dkr.ecr.us-east-1.amazonaws.com
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: pry-backend-shipping
+        IMAGE_TAG: latest
+        #IMAGE_TAG: ${{ env.VERSION }}
+      run: |
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
      ##########################################
      ##########  DEPLOYMENT TO ECS ############
 
      ## el arn rol lo saco de IAM roles => arn:aws:iam::317097728802:role/LabRole
   deploy-to-ecs:
-    needs: build-and-push-ecr
+    needs: [build-docker-image, postman-tests, push-ecr]
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -109,7 +177,7 @@ jobs:
        CLUSTER_NAME: fargate-be
        SERVICE_NAME: service-pry-backend-shipping
        TASK_DEFINITION_NAME: task-def-pry-backend-shipping
-       ECR_REGISTRY: ${{ needs.build-and-push-ecr.outputs.ecr_registry }}
+       ECR_REGISTRY: ${{ needs.build-docker-image.outputs.ecr_registry }}
        ECR_REPOSITORY: pry-backend-shipping
        IMAGE_TAG: latest
       run: |
@@ -140,36 +208,7 @@ jobs:
        aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition $NEW_TASK_DEFINITION_REVISION 
      
      
-  # run-postman-tests:
-  #   needs: deploy-to-ecs
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - name: Checkout code
-  #     uses: actions/checkout@v2
 
-  #   - name: Install NodeJS
-  #     uses: actions/setup-node@v3
-  #     with:
-  #       node-version: 20
-  #   #(aqui podriamos agregar slack para notificar si falla el test [npm install -g newman-reporter-slackreporter])
-  #   - name: Install globally Newman & Reporter
-  #     run: |
-  #       npm install -g newman
-  #       npm install -g newman-reporter-htmlextra
-      
-  #     # Se crea un directorio (postman) en la raiz del proyecto para guardar el reporte generado por newman
-  #     # Se ejecuta el comando newman run para correr la coleccion de postman y se genera un reporte en formato html
-  #     # POSTMAN_REPOSITORY_NAME fue definida al comienzo del archivo en la seccion de env  
-  #   - name: Run Postman collection & generate report
-  #     run: |
-  #       mkdir -p postman
-  #       newman run .github/tests/$#{{ env.POSTMAN_REPOSITORY_NAME }}.postman_collectionConTEST.json -r htmlextra --reporter-htmlextra-export testResults/testReport.html
-
-  #   - name: Upload Test Report
-  #     uses: actions/upload-artifact@v2
-  #     with:
-  #       name: postman-test-report
-  #       path: postman/testReport.html
 
     
         
