@@ -109,6 +109,7 @@ jobs:
       # POSTMAN_REPOSITORY_NAME fue definida al comienzo del archivo en la seccion de env  
     - name: Run Postman collection & generate report
       run: |
+        rm -rf postman
         mkdir -p postman
         newman run .github/tests/${{ env.POSTMAN_REPOSITORY_NAME }}.postman_collectionConTEST.json -r htmlextra --reporter-htmlextra-export testResults/testReport.html
 
