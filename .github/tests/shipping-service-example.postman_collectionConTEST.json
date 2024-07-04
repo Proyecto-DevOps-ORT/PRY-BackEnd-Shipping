@@ -27,7 +27,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://54.152.168.187:8080/shipping/c",
+					"raw": "http://localhost:8080/shipping/c",
 					"protocol": "http",
 					"host": [
 						"34",
