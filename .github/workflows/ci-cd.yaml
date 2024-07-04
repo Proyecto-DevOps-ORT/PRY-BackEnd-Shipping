@@ -110,7 +110,7 @@ jobs:
     - name: Run Postman collection & generate report
       run: |
         mkdir -p postman
-        newman run .github/tests/$#{{ env.POSTMAN_REPOSITORY_NAME }}.postman_collectionConTEST.json -r htmlextra --reporter-htmlextra-export testResults/testReport.html
+        newman run .github/tests/${{ env.POSTMAN_REPOSITORY_NAME }}.postman_collectionConTEST.json -r htmlextra --reporter-htmlextra-export testResults/testReport.html
 
     - name: Upload Test Report
       uses: actions/upload-artifact@v2
