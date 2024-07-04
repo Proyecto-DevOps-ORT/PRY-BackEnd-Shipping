@@ -43,7 +43,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Proyecto-DevOps-ORT_PRY-BackEnd-Shipping
 
-  build-docker-image:
+  build-docker-image-and-test:
     needs: sonarcloud
     runs-on: ubuntu-latest
     outputs:
@@ -86,13 +86,12 @@ jobs:
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
        ## echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
+           # Add a step to run the Docker container
+    - name: Run Docker container
+      run: docker run -d --name my-app-container -p 8080:8080 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-  postman-tests:
-    needs: build-docker-image
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+    # - name: Checkout code
+    #   uses: actions/checkout@v2
 
     - name: Install NodeJS
       uses: actions/setup-node@v3
@@ -121,7 +120,7 @@ jobs:
 
 
   push-ecr:
-    needs: [postman-tests]
+    needs: [build-docker-image-and-test]
     runs-on: ubuntu-latest
     outputs:
       ecr_registry: ${{ steps.output-values.outputs.ecr_registry }} # Asegurarse de que este output se define correctamente
@@ -159,7 +158,7 @@ jobs:
 
      ## el arn rol lo saco de IAM roles => arn:aws:iam::317097728802:role/LabRole
   deploy-to-ecs:
-    needs: [build-docker-image, postman-tests, push-ecr]
+    needs: [build-docker-image-and-test, push-ecr]
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -179,7 +178,7 @@ jobs:
        CLUSTER_NAME: fargate-be
        SERVICE_NAME: service-pry-backend-shipping
        TASK_DEFINITION_NAME: task-def-pry-backend-shipping
-       ECR_REGISTRY: ${{ needs.build-docker-image.outputs.ecr_registry }}
+       ECR_REGISTRY: ${{ needs.build-docker-image-and-test.outputs.ecr_registry }}
        ECR_REPOSITORY: pry-backend-shipping
        IMAGE_TAG: latest
       run: |
