@@ -2,7 +2,7 @@ name: CI/CD
 
 env:
   POSTMAN_REPOSITORY_NAME: shipping-service-example # Defino nombre de repositorio postman
-  ECR_REPOSITORY: pry-backend-shipping
+  ECR_REPOSITORY: repo-pry-backend-shipping
   IMAGE_TAG: latest
 
 
@@ -83,46 +83,45 @@ jobs:
         #IMAGE_TAG: ${{ env.VERSION }}
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        run: docker run -d --name my-app-container -p 8080:8080 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-       ## echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG       
+        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
+      # #run: docker run -d --name my-app-container -p 8080:8080 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+    # # - name: Checkout code
+    # #   uses: actions/checkout@v2
+
+    # - name: Install NodeJS
+    #   uses: actions/setup-node@v3
+    #   with:
+    #     node-version: 20
+    # #(aqui podriamos agregar slack para notificar si falla el test [npm install -g newman-reporter-slackreporter])
+    # - name: Install globally Newman & Reporter
+    #   run: |
+    #     npm install -g newman
+    #     npm install -g newman-reporter-htmlextra
       
+    #   # Se crea un directorio (postman) en la raiz del proyecto para guardar el reporte generado por newman
+    #   # Se ejecuta el comando newman run para correr la coleccion de postman y se genera un reporte en formato html
+    #   # POSTMAN_REPOSITORY_NAME fue definida al comienzo del archivo en la seccion de env  
+    # - name: Run Postman collection & generate report
+    #   run: |
+    #     rm -rf postman
+    #     mkdir -p postman
+    #     newman run .github/tests/$#{{ env.POSTMAN_REPOSITORY_NAME }}.postman_collectionConTEST.json -r htmlextra --reporter-htmlextra-export postman/testReport.html
 
-    # - name: Checkout code
-    #   uses: actions/checkout@v2
-
-    - name: Install NodeJS
-      uses: actions/setup-node@v3
-      with:
-        node-version: 20
-    #(aqui podriamos agregar slack para notificar si falla el test [npm install -g newman-reporter-slackreporter])
-    - name: Install globally Newman & Reporter
-      run: |
-        npm install -g newman
-        npm install -g newman-reporter-htmlextra
-      
-      # Se crea un directorio (postman) en la raiz del proyecto para guardar el reporte generado por newman
-      # Se ejecuta el comando newman run para correr la coleccion de postman y se genera un reporte en formato html
-      # POSTMAN_REPOSITORY_NAME fue definida al comienzo del archivo en la seccion de env  
-    - name: Run Postman collection & generate report
-      run: |
-        rm -rf postman
-        mkdir -p postman
-        newman run .github/tests/${{ env.POSTMAN_REPOSITORY_NAME }}.postman_collectionConTEST.json -r htmlextra --reporter-htmlextra-export postman/testReport.html
-
-    - name: Upload Test Report
-      uses: actions/upload-artifact@v2
-      with:
-        name: postman-test-report
-        path: postman/testReport.html
+    # - name: Upload Test Report
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: postman-test-report
+    #     path: postman/testReport.html
 
 
   push-ecr:
     needs: [build-docker-image-and-test]
     runs-on: ubuntu-latest
-    outputs:
-      ecr_registry: ${{ steps.output-values.outputs.ecr_registry }} # Asegurarse de que este output se define correctamente
+    #outputs:
+      #ecr_registry: $#{{ steps.output-values.outputs.ecr_registry }} # Asegurarse de que este output se define correctamente
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
@@ -147,7 +146,7 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: pry-backend-shipping
         IMAGE_TAG: latest
-        #IMAGE_TAG: ${{ env.VERSION }}
+        #IMAGE_TAG: $#{{ env.VERSION }}
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
