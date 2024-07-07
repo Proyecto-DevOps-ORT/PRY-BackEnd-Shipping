@@ -47,7 +47,8 @@ jobs:
     needs: sonarcloud
     runs-on: ubuntu-latest
     outputs:
-      ecr_registry: ${{ steps.output-values.outputs.ecr_registry }} # Asegurarse de que este output se define correctamente
+     ecr_registry: ${{ steps.set-output.outputs.ecr_registry}} # Asegurarse de que este output se define correctamente
+      # ecr_registry: ${#{ steps.output-values.outputs.ecr_registry }} # Asegurarse de que este output se define correctamente
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -68,9 +69,13 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
+    # - name: Set output for ECR registry
+    #   id: output-values
+    #   run: echo "::set-output name=ecr_registry::${#{ steps.login-ecr.outputs.registry }}"
+
     - name: Set output for ECR registry
-      id: output-values
-      run: echo "::set-output name=ecr_registry::${{ steps.login-ecr.outputs.registry }}"
+      id: set-output
+      run: echo "ecr_registry = ${{ steps.login-ecr.outputs.registry }}"  >> $GITHUB_OUTPUT
 
 
     - name: Build, tag and push Docker image to ECR
@@ -84,7 +89,7 @@ jobs:
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG       
-        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+       # #echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
       # #run: docker run -d --name my-app-container -p 8080:8080 $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
