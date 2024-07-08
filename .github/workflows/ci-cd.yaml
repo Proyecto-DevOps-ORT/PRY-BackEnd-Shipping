@@ -74,7 +74,7 @@ jobs:
     #   # POSTMAN_REPOSITORY_NAME fue definida al comienzo del archivo en la seccion de env  
     - name: Run Postman collection & generate report
       run: |       
-        newman run .github/tests/${{ env.POSTMAN_REPOSITORY_NAME }}.postman_collectionConTEST.json -r htmlextra --reporter-htmlextra-export postman/testReport.html
+        newman run .github/tests/${{ env.POSTMAN_REPOSITORY_NAME }}.postman_collectionConTEST.json -r htmlextra --reporter-htmlextra-export testReport.html
 
        # # rm -rf postman
         # mkdir -p postman
@@ -83,7 +83,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: postman-test-report
-        path: postman/testReport.html
+        path: testReport.html
 
 
   push-ecr:
