@@ -1,0 +1,189 @@
+name: CI/CD
+
+env:
+  POSTMAN_REPOSITORY_NAME: shipping-service-example # Defino nombre de repositorio postman
+  ECR_REPOSITORY: repo-pry-backend-shipping
+  IMAGE_TAG: latest
+
+
+on:
+  push:
+    branches:
+      - main
+      - feature/PDO-2
+      - develop
+
+jobs:
+
+  sonarcloud:
+     runs-on: ubuntu-latest
+     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'zulu' # Alternative distribution options are available.
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      - name: Build and analyze
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Proyecto-DevOps-ORT_PRY-BackEnd-Shipping
+
+  build-docker-image-and-test:
+    needs: sonarcloud
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+     #Esto puede ser necesario para la contruccion de la imagen
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+          
+    - name: Build Docker image
+      run: docker build -t app-shipping:latest .
+
+    - name: Run Docker container
+      run: docker run -d --name my-app-container -p 8081:8080 app-shipping:latest
+
+    - name: Setup NodeJS
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+    # #(aqui podriamos agregar slack para notificar si falla el test [npm install -g newman-reporter-slackreporter])
+    - name: Install globally Newman & Reporter
+      run: |
+        npm install -g newman
+        npm install -g newman-reporter-htmlextra
+      
+    #   # Se crea un directorio (postman) en la raiz del proyecto para guardar el reporte generado por newman
+    #   # Se ejecuta el comando newman run para correr la coleccion de postman y se genera un reporte en formato html
+    #   # POSTMAN_REPOSITORY_NAME fue definida al comienzo del archivo en la seccion de env  
+    - name: Run Postman collection & generate report
+      run: |       
+        newman run .github/tests/${{ env.POSTMAN_REPOSITORY_NAME }}.postman_collectionConTEST.json -r htmlextra --reporter-htmlextra-export testReport.html
+
+       # # rm -rf postman
+        # mkdir -p postman
+
+    - name: Upload Test Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: postman-test-report
+        path: testReport.html
+
+
+  push-ecr:
+    needs: [build-docker-image-and-test]
+    runs-on: ubuntu-latest
+    outputs:
+     ecr_registry: ${{ steps.set-output.outputs.ecr_registry}} # Asegurarse de que este output se define correctamente
+      # ecr_registry: ${#{ steps.output-values.outputs.ecr_registry }} # Asegurarse de que este output se define correctamente
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+     
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{secrets.AWS_ACCESS_KEY_ID}}
+        aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+        aws-session-token: ${{secrets.AWS_SESSION_TOKEN}}
+        aws-region: ${{secrets.AWS_DEFAULT_REGION}}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Set output for ECR registry
+      id: set-output
+      run: echo "ecr_registry = ${{ steps.login-ecr.outputs.registry }}"  >> $GITHUB_OUTPUT
+
+
+
+    - name: push Docker image to ECR
+      id: push-image
+      env:
+        #317097728802.dkr.ecr.us-east-1.amazonaws.com
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: pry-backend-shipping
+        IMAGE_TAG: latest
+        #IMAGE_TAG: $#{{ env.VERSION }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+     ##########################################
+     ##########  DEPLOYMENT TO ECS ############
+
+     ## el arn rol lo saco de IAM roles => arn:aws:iam::317097728802:role/LabRole
+  deploy-to-ecs:
+    needs: [build-docker-image-and-test, push-ecr]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{secrets.AWS_ACCESS_KEY_ID}}
+        aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+        aws-session-token: ${{secrets.AWS_SESSION_TOKEN}}
+        aws-region: ${{secrets.AWS_DEFAULT_REGION}}
+
+    - name: Update ECS service with new image
+      env:
+       AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+       CLUSTER_NAME: fargate-be
+       SERVICE_NAME: service-pry-backend-shipping
+       TASK_DEFINITION_NAME: task-def-pry-backend-shipping
+       ECR_REGISTRY: ${{ needs.push-ecr.outputs.ecr_registry }}
+       ECR_REPOSITORY: pry-backend-shipping
+       IMAGE_TAG: latest
+      run: |
+       # Get the current task definition
+       TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition $TASK_DEFINITION_NAME --query 'taskDefinition')
+       
+       # Extract the family and container definitions
+       FAMILY=$(echo $TASK_DEFINITION | jq -r .family)
+       CONTAINER_DEFINITIONS=$(echo $TASK_DEFINITION | jq '.containerDefinitions')
+
+       # Update the container image
+       NEW_CONTAINER_DEFINITIONS=$(echo $CONTAINER_DEFINITIONS | jq '[.[] | if .name == "container-name" then .image = "'$ECR_REGISTRY'/'$ECR_REPOSITORY':'$IMAGE_TAG'" else . end]')
+
+       # Register the new task definition
+       NEW_TASK_DEFINITION=$(aws ecs register-task-definition \
+         --family $FAMILY \
+         --container-definitions "$NEW_CONTAINER_DEFINITIONS" \
+         --requires-compatibilities "FARGATE" \
+         --network-mode "awsvpc" \
+         --cpu "256" \
+         --memory "512"\
+         --execution-role-arn "arn:aws:iam::317097728802:role/LabRole")
+
+       # Get the revision number of the new task definition
+       NEW_TASK_DEFINITION_REVISION=$(echo $NEW_TASK_DEFINITION | jq -r '.taskDefinition.taskDefinitionArn')
+
+       # Update the ECS service to use the new task definition
+       aws ecs update-service --cluster $CLUSTER_NAME --service $SERVICE_NAME --task-definition $NEW_TASK_DEFINITION_REVISION 
+     
+     
+
+
+    
+        
