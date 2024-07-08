@@ -12,6 +12,7 @@ on:
       - main
       - feature/PDO-2
       - develop
+      - staging
 
 jobs:
 
