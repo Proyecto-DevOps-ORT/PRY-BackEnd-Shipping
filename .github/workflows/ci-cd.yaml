@@ -73,10 +73,11 @@ jobs:
     #   # Se ejecuta el comando newman run para correr la coleccion de postman y se genera un reporte en formato html
     #   # POSTMAN_REPOSITORY_NAME fue definida al comienzo del archivo en la seccion de env  
     - name: Run Postman collection & generate report
-      run: |
-        rm -rf postman
-        mkdir -p postman
+      run: |       
         newman run .github/tests/${{ env.POSTMAN_REPOSITORY_NAME }}.postman_collectionConTEST.json -r htmlextra --reporter-htmlextra-export postman/testReport.html
+
+       # # rm -rf postman
+        # mkdir -p postman
 
     - name: Upload Test Report
       uses: actions/upload-artifact@v2
