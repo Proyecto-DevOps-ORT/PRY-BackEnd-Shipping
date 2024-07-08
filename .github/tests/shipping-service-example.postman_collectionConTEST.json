@@ -30,10 +30,7 @@
 					"raw": "http://localhost:8081/shipping/c",
 					"protocol": "http",
 					"host": [
-						"34",
-						"227",
-						"89",
-						"167"
+						"localhost"
 					],
 					"port": "8081",
 					"path": [
