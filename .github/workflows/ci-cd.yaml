@@ -213,7 +213,7 @@ jobs:
          --network-mode "awsvpc" \
          --cpu "256" \
          --memory "512"\
-         --execution-role-arn "arn:aws:iam::317097728802:role/LabRole"
+         --execution-role-arn "arn:aws:iam::317097728802:role/LabRole" \
          --task_role_arn = "arn:aws:iam::317097728802:role/LabRole")
 
        # Get the revision number of the new task definition
