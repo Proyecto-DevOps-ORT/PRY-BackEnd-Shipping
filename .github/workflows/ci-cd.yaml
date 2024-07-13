@@ -1,18 +1,56 @@
 name: CI/CD
 
-env:
-  POSTMAN_REPOSITORY_NAME: shipping-service-example # Defino nombre de repositorio postman
-  ECR_REPOSITORY: repo-pry-backend-shipping
-  IMAGE_TAG: latest
+# env:
+  #POSTMAN_REPOSITORY_NAME: shipping-service-example # Defino nombre de repositorio postman
+  # ECR_REPOSITORY: repo-pry-backend-shipping
+  #IMAGE_TAG: latest
 
 
 on:
-  push:
-    branches:
-      - main
-      - feature/PDO-2
-      - develop
-      - staging
+  workflow_call:
+    inputs:
+      CI_ENV:
+        required: true
+        type: string
+      CONTENTFUL_ENVIRONMENT:
+        required: true
+        type: string
+      ORGANIZATION:
+        required: true
+        type: string
+      REPOSITORY:
+        required: true
+        type: string
+      ECR_REPOSITORY:
+        required: true
+        type: string
+      POSTMAN_REPOSITORY_NAME:
+        required: true
+        type: string
+      IMAGE_TAG:
+        required: true
+        type: string
+      CLUSTER_NAME: 
+        required: true
+        type: string
+      SERVICE_NAME: 
+        required: true
+        type: string
+      TASK_DEFINITION_NAME: 
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_DEFAULT_REGION:
+        required: true
+      AWS_SESSION_TOKEN:
+        required: true
+      SONAR_TOKEN:
+        required: true
+      
 
 jobs:
 
@@ -22,28 +60,28 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: 17
-          distribution: 'zulu' # Alternative distribution options are available.
-      - name: Cache SonarCloud packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-      - name: Cache Maven packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
-      - name: Build and analyze
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Proyecto-DevOps-ORT_PRY-BackEnd-Shipping
+      # - name: Set up JDK 17
+      #   uses: actions/setup-java@v4
+      #   with:
+      #     java-version: 17
+      #     distribution: 'zulu' # Alternative distribution options are available.
+      # - name: Cache SonarCloud packages
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: ~/.sonar/cache
+      #     key: ${{ runner.os }}-sonar
+      #     restore-keys: ${{ runner.os }}-sonar
+      # - name: Cache Maven packages
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: ~/.m2
+      #     key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+      #     restore-keys: ${{ runner.os }}-m2
+      # - name: Build and analyze
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #   run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=${{ inputs.ORGANIZATION }}_${{ inputs.REPOSITORY }}
 
   build-docker-image-and-test:
     needs: sonarcloud
@@ -56,10 +94,10 @@ jobs:
       uses: docker/setup-buildx-action@v3
           
     - name: Build Docker image
-      run: docker build -t app-shipping:latest .
+      run: docker build -t my-app-image:${{ inputs.CI_ENV }} . # pongo my-app-image generico, pero podria ser el nombre de la app shipping, orders...
 
     - name: Run Docker container
-      run: docker run -d --name my-app-container -p 8081:8080 app-shipping:latest
+      run: docker run -d --name my-app-container -p 8081:8080 my-app-image:${{ inputs.CI_ENV }} #aca en lugar de latest pongo el enviroment cuando no es main
 
     - name: Setup NodeJS
       uses: actions/setup-node@v4
@@ -76,7 +114,7 @@ jobs:
     #   # POSTMAN_REPOSITORY_NAME fue definida al comienzo del archivo en la seccion de env  
     - name: Run Postman collection & generate report
       run: |       
-        newman run .github/tests/${{ env.POSTMAN_REPOSITORY_NAME }}.postman_collectionConTEST.json -r htmlextra --reporter-htmlextra-export testReport.html
+        newman run .github/tests/${{ inputs.POSTMAN_REPOSITORY_NAME }}.postman_collectionConTEST.json -r htmlextra --reporter-htmlextra-export testReport.html
 
        # # rm -rf postman
         # mkdir -p postman
@@ -121,8 +159,8 @@ jobs:
       env:
         #317097728802.dkr.ecr.us-east-1.amazonaws.com
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: pry-backend-shipping
-        IMAGE_TAG: latest
+        ECR_REPOSITORY: ${{ inputs.ECR_REPOSITORY }}
+        IMAGE_TAG: ${{ inputs.CI_ENV }} #aca en lugar de latest pongo el enviroment cuando no es main
         #IMAGE_TAG: $#{{ env.VERSION }}
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
@@ -150,12 +188,12 @@ jobs:
     - name: Update ECS service with new image
       env:
        AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-       CLUSTER_NAME: fargate-be
-       SERVICE_NAME: service-pry-backend-shipping
-       TASK_DEFINITION_NAME: task-def-pry-backend-shipping
+       CLUSTER_NAME: ${{ inputs.CLUSTER_NAME }}
+       SERVICE_NAME: ${{ inputs.SERVICE_NAME }}
+       TASK_DEFINITION_NAME: ${{ inputs.TASK_DEFINITION_NAME }}
        ECR_REGISTRY: ${{ needs.push-ecr.outputs.ecr_registry }}
-       ECR_REPOSITORY: pry-backend-shipping
-       IMAGE_TAG: latest
+       ECR_REPOSITORY: ${{ inputs.ECR_REPOSITORY }}
+       IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
       run: |
        # Get the current task definition
        TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition $TASK_DEFINITION_NAME --query 'taskDefinition')
@@ -175,7 +213,8 @@ jobs:
          --network-mode "awsvpc" \
          --cpu "256" \
          --memory "512"\
-         --execution-role-arn "arn:aws:iam::317097728802:role/LabRole")
+         --execution-role-arn "arn:aws:iam::317097728802:role/LabRole" \
+         --task-role-arn "arn:aws:iam::317097728802:role/LabRole")
 
        # Get the revision number of the new task definition
        NEW_TASK_DEFINITION_REVISION=$(echo $NEW_TASK_DEFINITION | jq -r '.taskDefinition.taskDefinitionArn')
