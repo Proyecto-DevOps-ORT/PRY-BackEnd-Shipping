@@ -1,0 +1,43 @@
+name: Github Action Workflow DEV
+
+
+
+on:
+  push:
+    branches:
+      - develop
+  repository_dispatch:
+    types:
+      - CICD-dev
+  workflow_dispatch:
+
+concurrency:
+  group: environment-${{ github.ref }}
+  cancel-in-progress: true
+
+# env:
+#   ORGANIZATION: 'Proyecto-DevOps-ORT'
+#   REPOSITORY: 'PRY-BackEnd-Shipping'  
+
+jobs:
+  CICD-dev:
+    uses: Proyecto-DevOps-ORT/PRY-BackEnd-Shipping/.github/workflows/ci-cd.yaml@develop #./.github/workflows/ci-cd.yml@develop
+    with:
+      CI_ENV: develop
+      CONTENTFUL_ENVIRONMENT: 'develop'
+      # ORGANIZATION: $ORGANIZATION
+      # REPOSITORY: $REPOSITORY
+      ORGANIZATION: 'Proyecto-DevOps-ORT'
+      REPOSITORY: 'PRY-BackEnd-Shipping'
+      ECR_REPOSITORY: 'pry-backend-shipping'
+      POSTMAN_REPOSITORY_NAME: 'shipping-service'
+      IMAGE_TAG: 'develop'
+      CLUSTER_NAME: 'ecs-cluster-backend'
+      SERVICE_NAME: 'service-shipping-dev'
+      TASK_DEFINITION_NAME: 'task-def-shipping-dev'
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN}}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
