@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   CICD-dev:
-    uses: Proyecto-DevOps-ORT/PRY-BackEnd-Shipping/.github/workflows/ci-cd.yml@main
+    uses: Proyecto-DevOps-ORT/PRY-BackEnd-Shipping/.github/workflows/ci-cd.yaml@main
     with:
       CI_ENV: production
       CONTENTFUL_ENVIRONMENT: 'main'
