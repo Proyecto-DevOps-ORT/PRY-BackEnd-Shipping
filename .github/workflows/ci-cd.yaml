@@ -213,7 +213,8 @@ jobs:
          --network-mode "awsvpc" \
          --cpu "256" \
          --memory "512"\
-         --execution-role-arn "arn:aws:iam::317097728802:role/LabRole")
+         --execution-role-arn "arn:aws:iam::317097728802:role/LabRole"
+         --task_role_arn = "arn:aws:iam::317097728802:role/LabRole")
 
        # Get the revision number of the new task definition
        NEW_TASK_DEFINITION_REVISION=$(echo $NEW_TASK_DEFINITION | jq -r '.taskDefinition.taskDefinitionArn')
