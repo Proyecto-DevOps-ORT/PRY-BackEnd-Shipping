@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   CICD-dev:
-    uses: Proyecto-DevOps-ORT/PRY-BackEnd-Shipping/.github/workflows/ci-cd.yml@staging
+    uses: Proyecto-DevOps-ORT/PRY-BackEnd-Shipping/.github/workflows/ci-cd.yaml@staging
     with:
       CI_ENV: staging
       CONTENTFUL_ENVIRONMENT: 'staging'
