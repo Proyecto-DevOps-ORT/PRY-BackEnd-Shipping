@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  CICD-dev:
+  CICD-stage:
     uses: Proyecto-DevOps-ORT/PRY-BackEnd-Shipping/.github/workflows/ci-cd.yaml@staging
     with:
       CI_ENV: staging
