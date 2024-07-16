@@ -1,5 +1,5 @@
 
-# PRY Shipping Service - Local
+# PRY Shipping Service -Local
 
 Este proyecto es un ejemplo de un servicio de shipping utilizando java y Docker.
 
